@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.DS_Store
+.env
+.env.*
+sessions/
+*.log
+*.cast
+!examples/*.cast
+
+# Machine-specific skill runtime
+runtime.json

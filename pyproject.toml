@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-command-deck"
+version = "0.1.0"
+description = "Local, read-only terminal sessions for watching AI commands live and replaying them."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = ["aiohttp>=3.11,<4"]
+classifiers = ["Operating System :: MacOS", "Operating System :: POSIX :: Linux", "Programming Language :: Python :: 3"]
+
+[project.scripts]
+ai-command-deck = "ai_command_deck.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["ai_command_deck*"]
+
+[tool.setuptools.package-data]
+ai_command_deck = ["static/*", "static/vendor/*"]
