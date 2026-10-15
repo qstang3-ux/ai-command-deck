@@ -46,7 +46,7 @@ def record(store, command, name=None):
                 event("o", text)
             os.write(1, chunk)
         decoder = codecs.getincrementaldecoder("utf-8")("replace")
-        output(("\r\n[执行命令] " + shlex.join(command) + "\r\n[状态] 执行中\r\n\r\n").encode())
+        output(("[执行命令] " + shlex.join(command) + "\r\n[状态] 执行中\r\n").encode())
         pid, fd = pty.fork()
         if pid == 0:
             try:

@@ -41,7 +41,7 @@
     $('empty').hidden = Boolean(item);
     if (!item || mode === 'text') return;
     if (!item.recording) return;
-    const options = {theme:'asciinema',fit:false,controls:mode==='replay',speed,startAt:mode==='replay'?resumeTime:0,terminalFontFamily:'Menlo, Consolas, monospace',terminalFontSize:'13px',terminalLineHeight:1.5,preload:true,autoPlay:(mode==='live'&&item.active)||resumePlayback,idleTimeLimit:2};
+    const options = {theme:'asciinema',fit:false,controls:mode==='replay',speed,startAt:mode==='replay'?resumeTime:0,terminalFontFamily:'Menlo, Consolas, monospace',terminalFontSize:'13px',terminalLineHeight:1.3,preload:true,autoPlay:(mode==='live'&&item.active)||resumePlayback,idleTimeLimit:2};
     if(mode==='live'&&!item.active)options.poster=`npt:${item.duration??0}`;
     resumeTime=0;resumePlayback=false;
     const source = mode === 'live'&&item.active
