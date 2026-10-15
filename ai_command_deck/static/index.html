@@ -9,12 +9,14 @@
 <script defer src="/static/app.js"></script>
 </head>
 <body>
-<header><div class="brand"><span class="brand-icon" aria-hidden="true">&gt;_</span><div><h1>AI 命令执行台</h1><p>实时查看 AI 执行的命令与输出</p></div></div><span id="state" role="status">连接中</span></header>
+<header>
+<div class="brand"><span class="brand-icon" aria-hidden="true">&gt;_</span><div><h1>AI 命令执行台</h1><p>实时查看 AI 执行的命令与输出</p></div></div>
+<div class="header-session"><h2 id="title">等待终端会话</h2><p id="detail">启动一个会话，即可实时查看命令执行</p></div>
+<div class="header-controls"><div class="tabs" role="tablist" aria-label="查看模式"><button id="live-tab" role="tab" aria-selected="true">实时终端</button><button id="replay-tab" role="tab" aria-selected="false">历史回放</button><button id="text-tab" role="tab" aria-selected="false">文本日志</button></div><div class="playback-tools"><button id="speed" hidden>倍速 1×</button><span id="mode-hint">ASCIINEMA PLAYER</span></div><a id="download" class="button" hidden>↓ 导出录像</a><span id="state" role="status">连接中</span></div>
+</header>
 <main>
 <aside><div class="aside-heading"><h2>执行会话</h2><span id="count">0 个</span></div><input id="filter" type="search" placeholder="搜索会话…" aria-label="搜索会话"><nav id="sessions" aria-label="执行会话列表"></nav><div class="aside-footer"><span class="dot"></span> 本机只读 · 保留 <span id="days">7</span> 天</div></aside>
 <section class="workspace">
-<div class="session-header"><div><h2 id="title">等待终端会话</h2><p id="detail">启动一个会话，即可实时查看命令执行</p></div><a id="download" class="button" hidden>↓ 导出录像</a></div>
-<div class="viewbar"><div class="tabs" role="tablist" aria-label="查看模式"><button id="live-tab" role="tab" aria-selected="true">实时终端</button><button id="replay-tab" role="tab" aria-selected="false">历史回放</button><button id="text-tab" role="tab" aria-selected="false">文本日志</button></div><div class="playback-tools"><button id="speed" hidden>倍速 1×</button><span id="mode-hint">ASCIINEMA PLAYER</span></div></div>
 <div id="terminal-view" class="terminal-view"><div id="player"></div><div id="empty" class="empty"><span aria-hidden="true">&gt;_</span><h3>让每一步执行都看得见</h3><p>选择左侧会话，查看实时终端或回放执行过程。</p></div></div>
 <div id="text-view" hidden><div class="text-tools"><label><input id="follow" type="checkbox" checked>跟随最新</label><label><input id="wrap" type="checkbox" checked>自动换行</label><button id="pause">暂停更新</button><button id="copy">复制输出</button></div><div class="text-viewport"><pre id="log" tabindex="0" aria-label="终端日志"></pre><button id="latest" hidden>回到最新 ↓</button></div></div>
 <footer><span id="summary">选择会话开始查看</span><span id="updated">记录保存在本机</span></footer>
