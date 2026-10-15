@@ -5,4 +5,4 @@
 #player:empty{display:none}
 
 /* Fixed terminal font: allow wide recordings to scroll without enlarging text. */
-#player{overflow:visible}.ap-wrapper{justify-content:flex-start;min-width:max-content}
+#player{overflow:visible;max-width:none;margin:0}#player .ap-wrapper{justify-content:flex-start;min-width:max-content}
