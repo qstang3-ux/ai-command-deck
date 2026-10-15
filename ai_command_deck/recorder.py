@@ -6,6 +6,7 @@ import json
 import os
 import pty
 import select
+import shlex
 import signal
 import struct
 import sys
@@ -38,6 +39,14 @@ def record(store, command, name=None):
         cast.write(json.dumps(dict(version=2, width=cols, height=rows, timestamp=int(time.time()), title=meta["name"], env={"TERM": os.environ.get("TERM", "xterm-256color")}), ensure_ascii=False) + "\n")
         def event(kind, data):
             cast.write(json.dumps([round(time.monotonic() - started, 6), kind, data], ensure_ascii=False) + "\n")
+        def output(chunk):
+            log.write(chunk)
+            text = decoder.decode(chunk)
+            if text:
+                event("o", text)
+            os.write(1, chunk)
+        decoder = codecs.getincrementaldecoder("utf-8")("replace")
+        output(("\r\n[执行命令] " + shlex.join(command) + "\r\n[状态] 执行中\r\n\r\n").encode())
         pid, fd = pty.fork()
         if pid == 0:
             try:
@@ -64,7 +73,6 @@ def record(store, command, name=None):
             fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", h, w, 0, 0))
             if log_event:
                 event("r", f"{w}x{h}")
-        decoder = codecs.getincrementaldecoder("utf-8")("replace")
         status = 0
         input_open = True
         try:
@@ -89,11 +97,7 @@ def record(store, command, name=None):
                         raise
                     if not chunk:
                         break
-                    log.write(chunk)
-                    text = decoder.decode(chunk)
-                    if text:
-                        event("o", text)
-                    os.write(1, chunk)
+                    output(chunk)
                 if input_open and 0 in ready:
                     chunk = os.read(0, 65536)
                     if chunk:
@@ -106,6 +110,9 @@ def record(store, command, name=None):
                 termios.tcsetattr(0, termios.TCSADRAIN, old)
             os.close(fd)
             _, status = os.waitpid(pid, 0)
+            exit_code = os.waitstatus_to_exitcode(status)
+            elapsed = time.monotonic() - started
+            output((f"\r\n[执行结束] 退出码 {exit_code} · 耗时 {elapsed:.2f} 秒\r\n").encode())
             tail = decoder.decode(b"", final=True)
             if tail:
                 event("o", tail)

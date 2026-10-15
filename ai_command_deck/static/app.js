@@ -35,15 +35,16 @@
     player=null;playerKey='';$('player').replaceChildren();
   }
   function renderPlayer(item) {
-    const key = `${selected}:${mode}:${Boolean(item?.recording)}:${speed}`;
+    const key = `${selected}:${mode}:${Boolean(item?.recording)}:${Boolean(item?.active)}:${speed}`;
     if (key === playerKey) return;
     dispose(); playerKey=key;
     $('empty').hidden = Boolean(item);
     if (!item || mode === 'text') return;
     if (!item.recording) return;
-    const options = {theme:'asciinema',fit:false,controls:mode==='replay',speed,startAt:mode==='replay'?resumeTime:0,terminalFontFamily:'Menlo, Consolas, monospace',terminalFontSize:'13px',terminalLineHeight:1.5,preload:true,autoPlay:mode==='live'||resumePlayback,idleTimeLimit:2};
+    const options = {theme:'asciinema',fit:false,controls:mode==='replay',speed,startAt:mode==='replay'?resumeTime:0,terminalFontFamily:'Menlo, Consolas, monospace',terminalFontSize:'13px',terminalLineHeight:1.5,preload:true,autoPlay:(mode==='live'&&item.active)||resumePlayback,idleTimeLimit:2};
+    if(mode==='live'&&!item.active)options.poster=`npt:${item.duration??0}`;
     resumeTime=0;resumePlayback=false;
-    const source = mode === 'live'
+    const source = mode === 'live'&&item.active
       ? `ws://${location.host}/api/live/${selected}`
       : `/api/cast/${selected}`;
     try {
@@ -95,6 +96,7 @@
     $('detail').textContent=item?(item.active?'运行中 · 命令与输出实时记录':`已结束 · ${item.duration!=null?item.duration.toFixed(1)+' 秒 · ':''}${item.exit_code!=null?'退出码 '+item.exit_code+' · ':''}本机保存`):'启动一个会话，即可实时查看命令执行';
     for(const name of ['live','replay','text'])$(name+'-tab').setAttribute('aria-selected',String(mode===name));
     $('live-tab').disabled=!item?.recording;$('replay-tab').disabled=!item?.recording||item.active;
+    $('terminal-view').classList.toggle('live',mode==='live');
     $('terminal-view').hidden=mode==='text';$('text-view').hidden=mode!=='text';
     $('download').hidden=!item?.recording||item.active;
     if(item?.recording)$('download').href=`/api/cast/${selected}?download=1`;

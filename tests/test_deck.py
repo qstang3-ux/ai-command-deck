@@ -51,17 +51,31 @@ class RecorderTests(unittest.TestCase):
             header,*events=map(json.loads,lines)
             self.assertEqual(header['version'],2)
             text=''.join(e[2] for e in events if e[1]=='o')
-            self.assertTrue(text.endswith('中文 ✓'),repr(text))
+            self.assertIn('中文 ✓',text)
+            self.assertLess(text.index('[执行命令]'),text.index('[状态]'))
+            self.assertGreater(text.index('[执行结束]'),text.rindex('中文 ✓'))
+            self.assertIn('退出码 7',text)
             self.assertNotIn('\ufffd',text)
             self.assertTrue(all(a[0]<=b[0] for a,b in zip(events,events[1:])))
             self.assertTrue(all(e[1]!='i' for e in events))
             self.assertEqual(next(Path(directory).glob('*.cast')).stat().st_mode&0o777,0o600)
 
+    def test_command_steps_show_command_output_and_each_status(self):
+        helper=Path(__file__).resolve().parents[1]/'skill/server-terminal-viewer/scripts/command-step.sh'
+        script='source "$1"; deck_step "printf step-output"; deck_step "exit 7"; deck_step "printf still-running"'
+        result=subprocess.run(['bash','-c',script,'bash',str(helper)],capture_output=True,text=True,timeout=5)
+        self.assertEqual(result.returncode,0)
+        self.assertIn('[执行命令] printf step-output',result.stdout)
+        self.assertIn('退出码 7',result.stdout)
+        self.assertLess(result.stdout.index('[执行命令]'),result.stdout.index('\nstep-output'))
+        self.assertIn('still-running',result.stdout)
+
     def test_terminal_resize_is_recorded(self):
         with tempfile.TemporaryDirectory() as directory:
             env={**os.environ,'TERMINAL_VIEWER_DATA':directory}
             script="import time; print('READY',flush=True); time.sleep(.5); print('DONE',flush=True)"
-            proc=subprocess.Popen([sys.executable,'-m','ai_command_deck','run','--',sys.executable,'-c',script],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=env)
+            child=Path(directory)/'child.py';child.write_text(script)
+            proc=subprocess.Popen([sys.executable,'-m','ai_command_deck','run','--',sys.executable,str(child)],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=env)
             try:
                 buf=b'';deadline=time.monotonic()+5
                 while b'READY' not in buf and time.monotonic()<deadline:
@@ -78,7 +92,8 @@ class RecorderTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             env={**os.environ,'TERMINAL_VIEWER_DATA':directory}
             script="import termios; s=termios.tcgetattr(0); s[3]&=~termios.ECHO; termios.tcsetattr(0,termios.TCSANOW,s); print('READY',flush=True); input(); print('ACCEPTED',flush=True)"
-            proc=subprocess.Popen([sys.executable,'-m','ai_command_deck','run','--',sys.executable,'-c',script],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=env)
+            child=Path(directory)/'child.py';child.write_text(script)
+            proc=subprocess.Popen([sys.executable,'-m','ai_command_deck','run','--',sys.executable,str(child)],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=env)
             try:
                 buf=b'';deadline=time.monotonic()+8
                 while b'READY' not in buf and time.monotonic()<deadline:
