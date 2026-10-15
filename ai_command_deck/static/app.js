@@ -45,8 +45,8 @@
     if(mode==='live'&&!item.active)options.poster=`npt:${item.duration??0}`;
     resumeTime=0;resumePlayback=false;
     const source = mode === 'live'&&item.active
-      ? `ws://${location.host}/api/live/${selected}`
-      : `/api/cast/${selected}`;
+      ? `ws://${location.host}/api/live/${selected}?compact=1`
+      : `/api/cast/${selected}?compact=1`;
     try {
       player=AsciinemaPlayer.create(source,$('player'),options);
       player.addEventListener('error', () => {$('summary').textContent='终端播放器加载失败，请切换文本日志或刷新重试';});
@@ -107,7 +107,7 @@
   }
   async function refreshText() {
     if(!selected||paused||mode!=='text')return;
-    const id=selected,response=await fetch(`/api/log/${id}`);
+    const id=selected,response=await fetch(`/api/log/${id}?compact=1`);
     if(!response.ok)throw Error('Log unavailable');
     const text=await response.text();
     if(id!==selected||mode!=='text')return;

@@ -29,7 +29,7 @@ After verified login, load the definition from this skill's `scripts/command-ste
 
 ## Review
 
-The browser is read-only. It provides a live terminal, asciinema historical replay after completion, recording export, and a text log with search-by-session, wrapping, copy, and follow controls. Scrolling text up disables following; session reading positions are restored. Full-screen programs are shown in terminal mode; text mode is best for copying and scrolling logs (latest 500 KB). Old text-only recordings remain readable but have no timed replay.
+The browser is read-only. Ordinary output displays without blank lines, including old recordings; originals and exported recordings retain their original content. Cursor-addressed full-screen applications retain their row layout. It provides a live terminal, asciinema historical replay after completion, recording export, and a text log with search-by-session, wrapping, copy, and follow controls. Scrolling text up disables following; session reading positions are restored. Full-screen programs are shown in terminal mode; text mode is best for copying and scrolling logs (latest 500 KB). Old text-only recordings remain readable but have no timed replay.
 
 Sessions are local in `~/.codex/terminal-viewer/sessions` with private permissions. The default retention is 7 days after session end, with startup and hourly cleanup; running sessions are retained. For explicit custom settings use `TERMINAL_VIEWER_DATA` and `TERMINAL_VIEWER_RETENTION_DAYS` consistently in both server and recorder. Exported copies are outside automatic cleanup. Never publish or upload session logs automatically.
 

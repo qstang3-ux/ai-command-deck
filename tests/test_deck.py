@@ -13,7 +13,26 @@ import unittest
 from aiohttp.test_utils import TestClient, TestServer
 from aiohttp import WSMsgType
 from ai_command_deck.storage import Store, utcnow
+from ai_command_deck.compact import CompactOutput
 from ai_command_deck.server import create_app
+
+
+class CompactOutputTests(unittest.TestCase):
+    def test_empty_lines_across_chunks_colors_and_indentation(self):
+        normalizer=CompactOutput()
+        chunks=['\r','\n\x1b[3','2m\n  \r\nfirst\r','\n\r\n  second','\n\n']
+        result=''.join(normalizer.feed(chunk) for chunk in chunks)+normalizer.finish()
+        self.assertEqual(result,'\x1b[32mfirst\r\n  second\n')
+
+    def test_screen_positioning_keeps_original_layout(self):
+        normalizer=CompactOutput()
+        text='\x1b[2J\x1b[Hfirst\n\nlast\n'
+        self.assertEqual(normalizer.feed(text),text)
+        self.assertEqual(normalizer.feed('\nmore\n\n'),'\nmore\n\n')
+        bounded=CompactOutput()
+        text=' '*5000+'visible\n'
+        self.assertEqual(bounded.feed(text),text)
+        self.assertEqual(bounded.spaces,'')
 
 
 class StorageTests(unittest.TestCase):
@@ -144,6 +163,28 @@ class ServerTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(response.status,status,(path,await response.text()))
         self.store.file(self.ident,'.cast').unlink()
         response=await self.client.get('/api/sessions');self.assertFalse((await response.json())[0]['recording'])
+
+    async def test_compact_display_preserves_original_recording(self):
+        path=self.store.file(self.ident,'.cast')
+        original=json.dumps(dict(version=2,width=100,height=30))+'\n'+json.dumps([.1,'o','\r\nfirst\r\n\r\n'])+'\n'+json.dumps([.2,'o','second\n\n'])+'\n'
+        path.write_text(original)
+        response=await self.client.get('/api/cast/'+self.ident+'?compact=1')
+        lines=(await response.text()).splitlines()
+        events=[json.loads(line) for line in lines[1:]]
+        self.assertEqual(''.join(event[2] for event in events),'first\r\nsecond\n')
+        response=await self.client.get('/api/cast/'+self.ident+'?compact=1&download=1')
+        self.assertEqual(await response.text(),original)
+        self.assertEqual(path.read_text(),original)
+        self.store.file(self.ident,'.log').write_text('\nfirst\n \nsecond\n\n')
+        response=await self.client.get('/api/log/'+self.ident+'?compact=1')
+        self.assertEqual(await response.text(),'first\nsecond')
+        ws=await self.client.ws_connect('/api/live/'+self.ident+'?compact=1',protocols=['v1.alis'])
+        await ws.receive(timeout=3);await ws.receive(timeout=3)
+        first=(await ws.receive(timeout=3)).data
+        second=(await ws.receive(timeout=3)).data
+        self.assertTrue(first.endswith(b'first\r\n'))
+        self.assertTrue(second.endswith(b'second\n'))
+        await ws.close()
 
     async def test_websocket_live_append_reconnect_and_end(self):
         async def connect():

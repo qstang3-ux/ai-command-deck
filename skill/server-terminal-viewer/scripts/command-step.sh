@@ -5,7 +5,7 @@ deck_step() {
         printf '%s\n' 'Usage: deck_step '\''command'\''' >&2
         return 2
     fi
-    printf '\n[执行命令] %s\n[状态] 执行中\n' "$1"
+    printf '[执行命令] %s\n[状态] 执行中\n' "$1"
     local deck_exit_code=0
     bash -c "$1" || deck_exit_code=$?
     printf '\n[执行结束] 退出码 %s\n' "$deck_exit_code"

@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 from aiohttp import web, WSMsgType
 from .storage import active
+from .compact import CompactOutput
 
 STATIC = Path(__file__).parent / "static"
 ANSI = re.compile(r'\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1b\\)|[()][A-Z0-9]|[=>])')
@@ -89,6 +90,31 @@ def create_app(store):
         ident = request.match_info['id']
         path = store.file(ident, '.cast')
         store.read(ident)
+        if request.query.get('compact') == '1' and request.query.get('download') != '1':
+            response = web.StreamResponse(headers={'Content-Type': 'application/x-asciicast', 'Cache-Control': 'no-store', 'Content-Security-Policy': CSP})
+            normalizer = CompactOutput()
+            with path.open(encoding='utf-8') as source:
+                header = source.readline()
+                if not header:
+                    raise web.HTTPConflict(text='Recording is initializing')
+                await response.prepare(request)
+                await response.write(header.encode())
+                last_time = 0
+                for line in source:
+                    if not line.endswith('\n'):
+                        break
+                    event = json.loads(line)
+                    last_time = event[0]
+                    if event[1] == 'o':
+                        event[2] = normalizer.feed(event[2])
+                        if not event[2]:
+                            continue
+                    await response.write((json.dumps(event, ensure_ascii=False)+'\n').encode())
+                tail = normalizer.finish()
+                if tail:
+                    await response.write((json.dumps([last_time, 'o', tail])+'\n').encode())
+            await response.write_eof()
+            return response
         response = web.FileResponse(path, headers={'Content-Type': 'application/x-asciicast'})
         if request.query.get('download') == '1':
             response.headers['Content-Disposition'] = f'attachment; filename="{ident}.cast"'
@@ -98,7 +124,10 @@ def create_app(store):
         path = store.file(request.match_info['id'], '.log')
         with path.open('rb') as file:
             file.seek(max(0, path.stat().st_size-500_000))
-            return web.Response(text=clean(file.read()), content_type='text/plain')
+            text = clean(file.read())
+            if request.query.get('compact') == '1':
+                text = '\n'.join(line for line in text.splitlines() if line.strip())
+            return web.Response(text=text, content_type='text/plain')
 
     async def live(request):
         ident = request.match_info['id']
@@ -106,6 +135,11 @@ def create_app(store):
         # Open before upgrading so a missing legacy recording returns HTTP 404.
         file = store.file(ident, '.cast').open(encoding='utf-8')
         ws = web.WebSocketResponse(protocols=['v1.alis'], heartbeat=20)
+        normalizer = CompactOutput() if request.query.get('compact') == '1' else None
+        def displayed(event):
+            if normalizer and event[1] == 'o':
+                event[2] = normalizer.feed(event[2])
+            return event
         try:
             header_line = file.readline()
             if not header_line:
@@ -127,7 +161,7 @@ def create_app(store):
                 if not line.endswith('\n'):
                     file.seek(pos)
                     break
-                event = json.loads(line)
+                event = displayed(json.loads(line))
                 seq += 1
                 await ws.send_bytes(event_packet([previous, event[1], event[2]], seq, previous))
                 previous = event[0]
@@ -142,7 +176,7 @@ def create_app(store):
                     pos = file.tell()
                     line = file.readline()
                     if line.endswith('\n'):
-                        event = json.loads(line)
+                        event = displayed(json.loads(line))
                         seq += 1
                         # Live output is delivered immediately; preserve original timing in .cast.
                         await ws.send_bytes(event_packet([0, event[1], event[2]], seq, 0))
